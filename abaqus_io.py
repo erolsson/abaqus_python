@@ -3,7 +3,7 @@ import pickle
 import pathlib
 import subprocess
 
-from common import abq, create_temp_dir_name
+from abaqus_python.common import abq, create_temp_dir_name
 
 
 abaqus_python_directory = pathlib.Path(__file__).parent.absolute() / "abaqus_files"

@@ -1,5 +1,6 @@
 from __future__ import print_function
 import os
+import pathlib
 try:
     import distro
 except ImportError:
@@ -25,4 +26,4 @@ def create_temp_dir_name(odb_file_name):
     while os.path.isdir(work_directory):
         i += 1
         work_directory = os.path.splitext(odb_file_name)[0] + '_tempdir' + str(i)
-    return work_directory
+    return pathlib.Path(work_directory)

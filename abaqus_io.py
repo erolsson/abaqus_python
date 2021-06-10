@@ -19,6 +19,7 @@ def create_empty_odb(new_odb_filename, odb_to_copy):
 def read_data_from_odb(field_id, odb_file_name, step_name=None, frame_number=-1, set_name='', instance_name='',
                        get_position_numbers=False, get_frame_value=False, position='INTEGRATION_POINT'):
 
+    current_directory = os.getcwd()
     work_directory = create_temp_dir_name(odb_file_name)
     os.makedirs(work_directory)
     parameter_pickle_name = work_directory / 'parameter_pickle.pkl'
@@ -33,7 +34,7 @@ def read_data_from_odb(field_id, odb_file_name, step_name=None, frame_number=-1,
     job = subprocess.Popen(abq + ' python read_data_from_odb.py ' + str(parameter_pickle_name) + ' '
                            + str(results_pickle_name), shell=True)
     job.wait()
-    os.chdir('..')
+    os.chdir(current_directory)
     with open(results_pickle_name, 'rb') as results_pickle:
         data = pickle.load(results_pickle, encoding='latin1')
     work_directory.unlink()
@@ -51,6 +52,7 @@ def write_data_to_odb(field_data, field_id, odb_file_name, step_name, instance_n
                       step_description='', frame_number=None, frame_value=None, field_description='',
                       position='INTEGRATION_POINT'):
 
+    current_directory = os.getcwd()
     work_directory = create_temp_dir_name(odb_file_name)
     os.makedirs(work_directory)
     pickle_filename = work_directory / 'load_field_to_odb_pickle.pkl'
@@ -69,5 +71,5 @@ def write_data_to_odb(field_data, field_id, odb_file_name, step_name, instance_n
                            shell=True)
     job.wait()
     os.chdir('..')
-
+    os.chdir(current_directory)
     work_directory.unlink()

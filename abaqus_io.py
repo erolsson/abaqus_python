@@ -4,6 +4,8 @@ import pathlib
 import shutil
 import subprocess
 
+import numpy as np
+
 from abaqus_python.common import abq, create_temp_dir_name
 
 

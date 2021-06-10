@@ -11,7 +11,7 @@ abaqus_python_directory = pathlib.Path(__file__).parent.absolute() / "abaqus_fil
 
 def create_empty_odb(new_odb_filename, odb_to_copy):
     os.chdir(abaqus_python_directory)
-    job = subprocess.Popen(abq + ' python create_empty_odb.py ' + new_odb_filename + ' ' + odb_to_copy,
+    job = subprocess.Popen(abq + ' python create_empty_odb.py ' + str(new_odb_filename) + ' ' + str(odb_to_copy),
                            shell=True)
     job.wait()
 
@@ -30,8 +30,8 @@ def read_data_from_odb(field_id, odb_file_name, step_name=None, frame_number=-1,
                      'position': position},
                     pickle_file, protocol=2)
     os.chdir(abaqus_python_directory)
-    job = subprocess.Popen(abq + ' python read_data_from_odb.py ' + parameter_pickle_name + ' ' + results_pickle_name,
-                           shell=True)
+    job = subprocess.Popen(abq + ' python read_data_from_odb.py ' + str(parameter_pickle_name) + ' '
+                           + str(results_pickle_name), shell=True)
     job.wait()
     os.chdir('..')
     with open(results_pickle_name, 'rb') as results_pickle:
@@ -65,7 +65,8 @@ def write_data_to_odb(field_data, field_id, odb_file_name, step_name, instance_n
                     pickle_file, protocol=2)
 
     os.chdir(abaqus_python_directory)
-    job = subprocess.Popen(abq + ' python write_data_to_odb.py ' + data_filename + ' ' + pickle_filename, shell=True)
+    job = subprocess.Popen(abq + ' python write_data_to_odb.py ' + str(data_filename) + ' ' + str(pickle_filename),
+                           shell=True)
     job.wait()
     os.chdir('..')
 

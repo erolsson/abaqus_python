@@ -1,6 +1,7 @@
 import os
 import pickle
 import pathlib
+import shutil
 import subprocess
 
 from abaqus_python.common import abq, create_temp_dir_name
@@ -37,7 +38,7 @@ def read_data_from_odb(field_id, odb_file_name, step_name=None, frame_number=-1,
     os.chdir(current_directory)
     with open(results_pickle_name, 'rb') as results_pickle:
         data = pickle.load(results_pickle, encoding='latin1')
-    work_directory.unlink()
+    shutil.rmtree(work_directory)
     if not get_position_numbers and not get_frame_value:
         return data['data']
     elif not get_position_numbers:
@@ -72,4 +73,4 @@ def write_data_to_odb(field_data, field_id, odb_file_name, step_name, instance_n
     job.wait()
     os.chdir('..')
     os.chdir(current_directory)
-    work_directory.unlink()
+    shutil.rmtree(work_directory)

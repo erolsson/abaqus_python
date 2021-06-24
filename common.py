@@ -5,6 +5,7 @@ import shutil
 
 package_path = os.path.dirname(__file__)
 
+
 class TemporaryDirectory:
     def __init__(self, name):
         self.name = name
@@ -26,12 +27,3 @@ class TemporaryDirectory:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         shutil.rmtree(self.work_directory)
-
-
-def create_temp_dir_name(odb_file_name):
-    i = 0
-    work_directory = os.path.splitext(odb_file_name)[0] + '_tempdir' + str(i)
-    while os.path.isdir(work_directory):
-        i += 1
-        work_directory = os.path.splitext(odb_file_name)[0] + '_tempdir' + str(i)
-    return pathlib.Path(work_directory)

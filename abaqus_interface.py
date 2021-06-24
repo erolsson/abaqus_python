@@ -79,6 +79,45 @@ class ABQInterface:
             os.chdir(current_directory)
             shutil.rmtree(work_directory)
 
+    def get_data_from_path(self, path_points, odb_filename, variable, component=None, step_name=None, frame_number=None,
+                           output_position='ELEMENT_NODAL'):
+        with TemporaryDirectory(odb_filename) as work_directory:
+            parameter_pickle_name = work_directory + '/parameter_pickle.pkl'
+            path_points_filename = work_directory + '/path_points.npy'
+            data_filename = work_directory + '/path_data.npy'
+            parameter_dict = {'odb_filename': odb_filename,
+                              'variable': variable,
+                              'path_points_filename': path_points_filename,
+                              'data_filename': data_filename}
+            if component is not None:
+                parameter_dict['component'] = component
+            if step_name is not None:
+                parameter_dict['step_name'] = step_name
+            if frame_number is not None:
+                parameter_dict['frame_number'] = frame_number
+            parameter_dict['output_position'] = output_position
 
-if __name__ == '__main__':
-    pass
+            with open(parameter_pickle_name, 'wb') as pickle_file:
+                pickle.dump(parameter_dict, pickle_file, protocol=2)
+            if not isinstance(path_points, np.ndarray):
+                path_points = np.array(path_points)
+            np.save(path_points_filename, path_points)
+            current_dir = os.getcwd()
+            os.chdir(abaqus_python_directory)
+            job = subprocess.Popen(self.abq + 'viewer noGUI=write_data_along_path.py -- ' + parameter_pickle_name,
+                                   shell=True)
+            job.wait()
+            os.chdir(current_dir)
+            data = np.unique(np.load(data_filename), axis=0)
+            _, idx = np.unique(data[:, 0], return_index=True)
+            return data[idx, 1]
+
+    def get_tensor_from_path(self, odb_file_name, path_points, field_id, step_name=None, frame_number=None,
+                             components=('11', '22', '33', '12', '13', '23'), output_position='INTEGRATION_POINT'):
+        data = np.zeros((path_points.shape[0], len(components)))
+        for i, component in enumerate(components):
+            stress = self.get_data_from_path(path_points, odb_file_name, field_id, step_name=step_name,
+                                             frame_number=frame_number, output_position=output_position,
+                                             component=field_id + component)
+            data[:, i] = stress
+        return data

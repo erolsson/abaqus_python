@@ -3,13 +3,16 @@ import sys
 
 import numpy as np
 
-from visualization import session
+from visualization import * # noqa
 import xyPlot
 import odbAccess
 
 from abaqusConstants import POINT_LIST, ELEMENT_NODAL, TRUE_DISTANCE, UNDEFORMED, PATH_POINTS, COMPONENT
 from abaqusConstants import NODAL, INTEGRATION_POINT, CENTROID
 
+
+# Getting rid of the flake8 issues that session is undefined
+session = session # noqa
 
 output_positions = {'ELEMENT_NODAL': ELEMENT_NODAL,
                     'NODAL': NODAL,

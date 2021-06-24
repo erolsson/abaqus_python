@@ -18,11 +18,16 @@ class ABQInterface:
             shell = '/bin/bash'
         self.shell_command = shell
 
-    def run_command(self, command_string, directory=None):
+    def run_command(self, command_string, directory=None, output=False):
         current_directory = os.getcwd()
         if directory is not None:
             os.chdir(directory)
-        job = subprocess.Popen([self.shell_command, '-i', '-c', command_string])
+        if output:
+            job = subprocess.Popen([self.shell_command, '-i', '-c', command_string])
+        else:
+            f_null = open(os.devnull, 'w')
+            job = subprocess.Popen([self.shell_command, '-i', '-c', command_string],
+                                   stdout=f_null, stderr=subprocess.STDOUT)
         job.wait()
         os.chdir(current_directory)
 

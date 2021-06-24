@@ -6,7 +6,7 @@ import pickle
 import numpy as np
 
 from odb_io_functions import write_field_to_odb
-from abaqusConstants import PRESS, MISES
+from utilities import output_positions, invariants
 
 
 def write_data_to_odb(array_file_name, pickle_file_name):
@@ -22,13 +22,15 @@ def write_data_to_odb(array_file_name, pickle_file_name):
     field_description = str(data['field_description'])
     frame_number = data['frame_number']
     frame_value = data['frame_value']
+    requested_invariants = data['invariants']
     position = output_positions([str(data['position'])])
 
-    invariants = None
+    requested_invariants = [invariants[str(inv)] for inv in requested_invariants]
+
     write_field_to_odb(field, field_id, odb_file, step_name=step_name, instance_name=instance_name,
                        set_name=set_name, step_description=step_description, frame_number=frame_number,
                        frame_value=frame_value, field_description=field_description, position=position,
-                       invariants=invariants)
+                       invariants=requested_invariants)
 
 
 if __name__ == '__main__':

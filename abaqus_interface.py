@@ -56,13 +56,14 @@ class ABQInterface:
 
     def write_data_to_odb(self, field_data, field_id, odb_file_name, step_name, instance_name='', set_name='',
                           step_description='', frame_number=None, frame_value=None, field_description='',
-                          position='INTEGRATION_POINT'):
+                          position='INTEGRATION_POINT', invariants=None):
         current_directory = os.getcwd()
         with TemporaryDirectory(odb_file_name) as work_directory:
             pickle_filename = work_directory / 'load_field_to_odb_pickle.pkl'
             data_filename = work_directory / 'field_data.npy'
             np.save(str(data_filename), field_data)
-
+            if invariants is None:
+                invariants = []
             with open(pickle_filename, 'wb') as pickle_file:
                 pickle.dump({'field_id': field_id, 'odb_file': odb_file_name, 'step_name': step_name,
                              'instance_name': instance_name, 'set_name': set_name, 'step_description': step_description,

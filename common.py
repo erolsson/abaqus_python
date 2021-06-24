@@ -29,7 +29,7 @@ class TemporaryDirectory:
         i = 0
         created = False
         while not created:
-            work_directory_name = pathlib.Path(str(self.name.absolute()) + '_tempdir' + str(i))
+            work_directory_name = pathlib.Path(str(self.name.absolute()).replace('.', '_') + '_tempdir' + str(i))
             try:
                 work_directory_name.mkdir(exist_ok=False)
             except FileExistsError:

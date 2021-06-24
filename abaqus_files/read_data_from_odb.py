@@ -1,3 +1,5 @@
+from __future__ import print_function, division
+
 import pickle
 import sys
 
@@ -22,10 +24,12 @@ position = INTEGRATION_POINT
 if str(data['position']) == 'NODAL':
     position = NODAL
 
-field_data = read_field_from_odb(field_id, odb_file_name, step_name, frame_number, set_name, instance_name=instance_name,
-                                 get_position_numbers=False, get_frame_value=False, position=position)
+field_data = read_field_from_odb(field_id, odb_file_name, step_name, frame_number, set_name,
+                                 instance_name=instance_name, get_position_numbers=get_position_numbers,
+                                 get_frame_value=get_frame_value, position=position)
 
 data_dict = {}
+
 if not get_position_numbers and not get_frame_value:
     data_dict['data'] = field_data
 else:

@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, division
 
 import odbAccess
 from abaqusConstants import DEFORMABLE_BODY, THREE_D

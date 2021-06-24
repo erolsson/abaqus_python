@@ -1,6 +1,8 @@
 from __future__ import print_function
 import os
 import pathlib
+import shutil
+
 try:
     import distro
 except ImportError:
@@ -17,7 +19,28 @@ else:
     abq = '/scratch/users/erik/SIMULIA/CAE/2018/linux_a64/code/bin/ABQLauncher'
     abq_viewer = '/scratch/users/erik/SIMULIA/CAE/2018/linux_a64/code/bin/ABQLauncher viewer'
 
-abaqus_function_dir = os.path.expanduser('~/railway_ballast/python/abaqus_functions')
+
+class TemporaryDirectory:
+    def __init__(self, name):
+        self.name = name
+        self.work_directory = None
+
+    def __enter__(self):
+        i = 0
+        created = False
+        while not created:
+            work_directory_name = pathlib.Path(str(self.name.absolute()) + '_tempdir' + str(i))
+            try:
+                work_directory_name.mkdir(exist_ok=False)
+            except FileExistsError:
+                i += 1
+            else:
+                created = True
+        self.work_directory = work_directory_name
+        return work_directory_name
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
 
 
 def create_temp_dir_name(odb_file_name):

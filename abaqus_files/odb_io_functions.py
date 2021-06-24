@@ -1,3 +1,5 @@
+from __future__ import print_function, division
+
 from collections import namedtuple
 
 import odbAccess
@@ -164,7 +166,7 @@ def write_field_to_odb(field_data, field_id, odb_file_name, step_name, instance_
         step = odb.Step(name=step_name, description=step_description, domain=TIME, timePeriod=1.)
     else:
         step = odb.steps[step_name]
-    if instance_name is '':
+    if instance_name == '':
         instance = odb.rootAssembly.instances[odb.rootAssembly.instances.keys()[0]]
     else:
         instance = odb.rootAssembly.instances[instance_name]

@@ -22,11 +22,9 @@ class ABQInterface:
                                + str(odb_to_copy),  shell=True)
         job.wait()
 
-
     def read_data_from_odb(self, field_id, odb_file_name, step_name=None, frame_number=-1, set_name='',
                            instance_name='', get_position_numbers=False, get_frame_value=False,
                            position='INTEGRATION_POINT'):
-
         current_directory = os.getcwd()
         with TemporaryDirectory(odb_file_name) as work_directory:
             parameter_pickle_name = work_directory / 'parameter_pickle.pkl'
@@ -56,11 +54,9 @@ class ABQInterface:
         else:
             return data['data'], data['frame_value'], data['node_labels'], data['element_labels']
 
-
     def write_data_to_odb(self, field_data, field_id, odb_file_name, step_name, instance_name='', set_name='',
                           step_description='', frame_number=None, frame_value=None, field_description='',
                           position='INTEGRATION_POINT'):
-
         current_directory = os.getcwd()
         with TemporaryDirectory(odb_file_name) as work_directory:
             pickle_filename = work_directory / 'load_field_to_odb_pickle.pkl'

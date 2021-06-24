@@ -40,7 +40,7 @@ class TemporaryDirectory:
         return work_directory_name
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+        shutil.rmtree(self.work_directory)
 
 
 def create_temp_dir_name(odb_file_name):

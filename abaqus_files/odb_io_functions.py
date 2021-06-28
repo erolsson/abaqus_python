@@ -55,7 +55,6 @@ def read_field_from_odb(field_id, odb_file_name, step_name=None, frame_number=-1
         coordinate_system = CoordinateSystem(str(coordinate_system['name']), coordinate_system['origin'],
                                              coordinate_system['point1'], coordinate_system['point2'],
                                              abaqus_constants[coordinate_system['system_type']])
-    print(coordinate_system)
     with OpenOdb(odb_file_name, read_only=False) as odb:
         if not instance_name:
             if len(odb.rootAssembly.instances) == 1:

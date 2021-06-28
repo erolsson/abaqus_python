@@ -49,6 +49,7 @@ class ABQInterface:
         current_directory = os.getcwd()
         if directory is not None:
             os.chdir(directory)
+        print(directory)
         if self.output is True:
             job = subprocess.Popen([self.shell_command, '-i', '-c', command_string])
         else:

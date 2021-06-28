@@ -96,7 +96,7 @@ class ABQInterface:
             with open(parameter_pickle_name, 'wb') as pickle_file:
                 pickle.dump(data_for_creating_odb, pickle_file, protocol=2)
             self.run_command(self.abq + ' python create_empty_odb_from_data.py ' + str(parameter_pickle_name),
-                             directory=abaqus_python_directory, output=True)
+                             directory=abaqus_python_directory)
 
     def read_data_from_odb(self, field_id, odb_file_name, step_name=None, frame_number=-1, set_name='',
                            instance_name='', get_position_numbers=False, get_frame_value=False,

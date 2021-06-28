@@ -53,7 +53,7 @@ class ABQInterface:
         print(directory)
         print(glob.glob("*"))
         if self.output is True:
-            job = subprocess.Popen([self.shell_command, '-i', '-c','cd directory &&' + command_string])
+            job = subprocess.Popen([self.shell_command, '-i', '-c','cd ' + + directory + ' &&' + command_string])
         else:
             f_null = open(os.devnull, 'w')
             job = subprocess.Popen([self.shell_command, '-i', '-c', command_string],

@@ -1,28 +1,55 @@
+from collections import namedtuple
+
 import os
 import pickle
 import pathlib
 import subprocess
 
 import numpy as np
-
-from .common import TemporaryDirectory
+from abaqus_python.utilities.common import TemporaryDirectory
 
 
 abaqus_python_directory = pathlib.Path(__file__).parent.absolute() / "abaqus_files"
 
 
+CoordinateSystem = namedtuple('CoordinateSystem', ['name', 'origin', 'point1', 'point2', 'system_type'])
+cylindrical_system_z = CoordinateSystem(name='cylindrical', origin=(0., 0., 0.), point1=(1., 0., 0.),
+                                        point2=(0., 1., 0.), system_type='CYLINDRICAL')
+
+
+class OdbInstance:
+    def __init__(self, name, input_file_data):
+        self.data = {
+            'instance_name': name,
+            'elements': {},
+            'node_sets': input_file_data.set_data['nset'],
+            'element_sets': input_file_data.set_data['elset']
+        }
+        nodes = []
+        for n in input_file_data.nodal_data:
+            node_data_list = [int(n[0])]
+            node_data_list.extend([float(coord) for coord in n[1:]])
+            nodes.append(node_data_list)
+        self.data['nodes'] = nodes
+        for element_type, element_data in input_file_data.elements.items():
+            pass
+            self.data['elements'][element_type] = element_data.tolist()
+
+
 class ABQInterface:
-    def __init__(self, abq_command, shell=None):
+    def __init__(self, abq_command, shell=None, output=True):
         self.abq = abq_command
         if shell is None:
             shell = '/bin/bash'
+        # ToDo: Update shell command for windows systems
         self.shell_command = shell
+        self.output = output
 
-    def run_command(self, command_string, directory=None, output=False):
+    def run_command(self, command_string, directory=None):
         current_directory = os.getcwd()
         if directory is not None:
             os.chdir(directory)
-        if output:
+        if self.output is True:
             job = subprocess.Popen([self.shell_command, '-i', '-c', command_string])
         else:
             f_null = open(os.devnull, 'w')
@@ -31,13 +58,49 @@ class ABQInterface:
         job.wait()
         os.chdir(current_directory)
 
-    def create_empty_odb(self, new_odb_filename, odb_to_copy):
-        self.run_command(self.abq + ' python create_empty_odb.py ' + str(new_odb_filename) + ' '
+    def get_steps(self, odb_file_name):
+        with TemporaryDirectory(odb_file_name) as work_directory:
+            results_pickle_name = work_directory / 'results.pkl'
+            self.run_command(self.abq + ' python get_steps.py ' + str(odb_file_name) + ' ' + str(results_pickle_name),
+                             directory=abaqus_python_directory)
+            with open(results_pickle_name, 'rb') as results_pickle:
+                steps = pickle.load(results_pickle, encoding='latin1')
+        return steps
+
+    def get_frames(self, odb_file_name, step_name=-1):
+        step_names = self.get_steps(odb_file_name)
+        if step_name == -1:
+            step_name = step_names[-1]
+        elif step_name not in step_names:
+            raise ValueError(f"The step name {step_name} is not present in the odb {odb_file_name}")
+        with TemporaryDirectory(odb_file_name) as work_directory:
+            results_pickle_name = work_directory / 'results.pkl'
+            self.run_command(self.abq + ' python get_frames.py ' + str(odb_file_name) + ' ' + step_name + ' '
+                             + str(results_pickle_name), directory=abaqus_python_directory)
+            with open(results_pickle_name, 'rb') as results_pickle:
+                frames = pickle.load(results_pickle, encoding='latin1')
+        return frames
+
+    def create_empty_odb_from_odb(self, new_odb_filename, odb_to_copy):
+        self.run_command(self.abq + ' python create_empty_odb_from_odb.py ' + str(new_odb_filename) + ' '
                          + str(odb_to_copy), directory=abaqus_python_directory)
+
+    def create_empty_odb_from_nodes_and_elements(self, odb_file_name, instances):
+        instances = [instance.data for instance in instances]
+        data_for_creating_odb = {
+            'odb_file_name': str(odb_file_name),
+            'instance_data': instances
+        }
+        with TemporaryDirectory(odb_file_name) as work_directory:
+            parameter_pickle_name = work_directory / 'parameter_pickle.pkl'
+            with open(parameter_pickle_name, 'wb') as pickle_file:
+                pickle.dump(data_for_creating_odb, pickle_file, protocol=2)
+            self.run_command(self.abq + ' python create_empty_odb_from_data.py ' + str(parameter_pickle_name),
+                             directory=abaqus_python_directory, output=True)
 
     def read_data_from_odb(self, field_id, odb_file_name, step_name=None, frame_number=-1, set_name='',
                            instance_name='', get_position_numbers=False, get_frame_value=False,
-                           position='INTEGRATION_POINT'):
+                           position='INTEGRATION_POINT', coordinate_system=None):
         with TemporaryDirectory(odb_file_name) as work_directory:
             parameter_pickle_name = work_directory / 'parameter_pickle.pkl'
             results_pickle_name = work_directory / 'results.pkl'
@@ -47,7 +110,7 @@ class ABQInterface:
                 pickle.dump({'field_id': field_id, 'odb_file_name': str(odb_file_name), 'step_name': step_name,
                              'frame_number': frame_number, 'set_name': set_name, 'instance_name': instance_name,
                              'get_position_numbers': get_position_numbers, 'get_frame_value': get_frame_value,
-                             'position': position},
+                             'position': position, 'coordinate_system': coordinate_system._asdict()},
                             pickle_file, protocol=2)
             self.run_command(self.abq + ' python read_data_from_odb.py ' + str(parameter_pickle_name) + ' '
                              + str(results_pickle_name), directory=abaqus_python_directory)
@@ -73,14 +136,15 @@ class ABQInterface:
             if invariants is None:
                 invariants = []
             with open(pickle_filename, 'wb') as pickle_file:
-                pickle.dump({'field_id': field_id, 'odb_file': odb_file_name, 'step_name': step_name,
-                             'instance_name': instance_name, 'set_name': set_name, 'step_description': step_description,
+                pickle.dump({'field_id': str(field_id), 'odb_file': str(odb_file_name), 'step_name': str(step_name),
+                             'instance_name': str(instance_name), 'set_name': str(set_name),
+                             'step_description': str(step_description),
                              'frame_number': frame_number, 'frame_value': frame_value,
-                             'field_description': field_description, 'position': position},
+                             'field_description': str(field_description), 'position': str(position)},
                             pickle_file, protocol=2)
 
             self.run_command(self.abq + ' python write_data_to_odb.py ' + str(data_filename) + ' '
-                             + str(pickle_filename))
+                             + str(pickle_filename), directory=abaqus_python_directory)
 
     def get_data_from_path(self, path_points, odb_filename, variable, component=None, step_name=None, frame_number=None,
                            output_position='ELEMENT_NODAL'):

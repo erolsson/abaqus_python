@@ -2,12 +2,13 @@ from __future__ import print_function, division
 
 from collections import namedtuple
 
-import odbAccess
 import numpy as np
 
 from abaqusConstants import INTEGRATION_POINT, ELEMENT_NODAL, NODAL, CYLINDRICAL, CENTROID, ELEMENT_FACE, TIME
 from abaqusConstants import SCALAR, TENSOR_3D_FULL, VECTOR
 
+from abaqus_constants import abaqus_constants
+from utilities import OpenOdb
 
 CoordinateSystem = namedtuple('CoordinateSystem', ['name', 'origin', 'point1', 'point2', 'system_type'])
 cylindrical_system_z = CoordinateSystem(name='cylindrical', origin=(0., 0., 0.), point1=(1., 0., 0.),
@@ -50,75 +51,78 @@ def read_field_from_odb(field_id, odb_file_name, step_name=None, frame_number=-1
                                     else:
                                         return data, frame_value, node_labels, element_labels
     """
-    odb = odbAccess.openOdb(odb_file_name, readOnly=False)
-
-    if not instance_name:
-        if len(odb.rootAssembly.instances) == 1:
-            base = odb.rootAssembly.instances[odb.rootAssembly.instances.keys()[0]]
-        else:
-            raise ValueError('odb has multiple instances, please specify an instance')
-    else:
-        base = odb.rootAssembly.instances[instance_name]
-    if position in [INTEGRATION_POINT, CENTROID, ELEMENT_NODAL, ELEMENT_FACE]:
-        set_dict = base.elementSets
-        set_func = base.ElementSet
-        all_name = 'ALL_ELEMENTS'
-        object_list = base.elements
-    else:
-        set_dict = base.nodeSets
-        set_func = base.NodeSet
-        all_name = 'ALL_NODES'
-        object_list = base.nodes
-
-    if set_name == '':
-        if all_name not in set_dict:
-            objects = object_list
-            set_func(name=all_name, elements=objects)
-        element_set = set_dict[all_name]
-    else:
-        element_set = set_dict[set_name]
-
-    if not step_name:
-        step_name = odb.steps.keys()[-1]
-
-    if frame_number == -1:
-        frame_number = len(odb.steps[step_name].frames) - 1
-    field = odb.steps[step_name].frames[frame_number].fieldOutputs[field_id].getSubset(position=position)
-    field = field.getSubset(region=element_set)
-    frame_value = odb.steps[step_name].frames[frame_number].frameValue
     if coordinate_system is not None:
-        if coordinate_system.name not in odb.rootAssembly.datumCsyses:
-            transform_system = odb.rootAssembly.DatumCsysByThreePoints(name=coordinate_system.name,
-                                                                       coordSysType=coordinate_system.system_type,
-                                                                       origin=coordinate_system.origin,
-                                                                       point1=coordinate_system.point1,
-                                                                       point2=coordinate_system.point2)
+        coordinate_system = CoordinateSystem(str(coordinate_system['name']), coordinate_system['origin'],
+                                             coordinate_system['point1'], coordinate_system['point2'],
+                                             abaqus_constants[coordinate_system['system_type']])
+    print(coordinate_system)
+    with OpenOdb(odb_file_name, read_only=False) as odb:
+        if not instance_name:
+            if len(odb.rootAssembly.instances) == 1:
+                base = odb.rootAssembly.instances[odb.rootAssembly.instances.keys()[0]]
+            else:
+                raise ValueError('odb has multiple instances, please specify an instance')
         else:
-            transform_system = odb.rootAssembly.datumCsyses[coordinate_system.name]
-
-        if rotating_system:
-            deformation_field = odb.steps[step_name].frames[frame_number].fieldOutputs['U']
-            field = field.getTransformedField(transform_system, deformationField=deformation_field)
+            base = odb.rootAssembly.instances[instance_name]
+        if position in [INTEGRATION_POINT, CENTROID, ELEMENT_NODAL, ELEMENT_FACE]:
+            set_dict = base.elementSets
+            set_func = base.ElementSet
+            all_name = 'ALL_ELEMENTS'
+            object_list = base.elements
         else:
-            field = field.getTransformedField(transform_system)
-    field = field.values
+            set_dict = base.nodeSets
+            set_func = base.NodeSet
+            all_name = 'ALL_NODES'
+            object_list = base.nodes
 
-    # ToDo: raise exception if field is empty
-    n1 = len(field)
-    n2 = 1 if type(field[0].data) is float else len(field[0].data)
-    if n2 > 1:
-        data = np.zeros((n1, n2))
-    else:
-        data = np.zeros(n1)
-    node_labels = []
-    element_labels = []
-    for i, data_point in enumerate(field):
-        data[i] = data_point.data
-        if position in [NODAL, ELEMENT_NODAL]:
-            node_labels.append(data_point.nodeLabel)
-        elif position in [INTEGRATION_POINT, CENTROID, ELEMENT_NODAL, ELEMENT_FACE]:
-            element_labels.append(data_point.elementLabel)
-    odb.close()
+        if set_name == '':
+            if all_name not in set_dict:
+                objects = object_list
+                set_func(name=all_name, elements=objects)
+            element_set = set_dict[all_name]
+        else:
+            element_set = set_dict[set_name]
+
+        if not step_name:
+            step_name = odb.steps.keys()[-1]
+
+        if frame_number == -1:
+            frame_number = len(odb.steps[step_name].frames) - 1
+        field = odb.steps[step_name].frames[frame_number].fieldOutputs[field_id].getSubset(position=position)
+        field = field.getSubset(region=element_set)
+        frame_value = odb.steps[step_name].frames[frame_number].frameValue
+        if coordinate_system is not None:
+            if coordinate_system.name not in odb.rootAssembly.datumCsyses:
+                transform_system = odb.rootAssembly.DatumCsysByThreePoints(name=coordinate_system.name,
+                                                                           coordSysType=coordinate_system.system_type,
+                                                                           origin=coordinate_system.origin,
+                                                                           point1=coordinate_system.point1,
+                                                                           point2=coordinate_system.point2)
+            else:
+                transform_system = odb.rootAssembly.datumCsyses[coordinate_system.name]
+
+            if rotating_system:
+                deformation_field = odb.steps[step_name].frames[frame_number].fieldOutputs['U']
+                field = field.getTransformedField(transform_system, deformationField=deformation_field)
+            else:
+                field = field.getTransformedField(transform_system)
+        field = field.values
+
+        # ToDo: raise exception if field is empty
+        n1 = len(field)
+        n2 = 1 if type(field[0].data) is float else len(field[0].data)
+        if n2 > 1:
+            data = np.zeros((n1, n2))
+        else:
+            data = np.zeros(n1)
+        node_labels = []
+        element_labels = []
+        for i, data_point in enumerate(field):
+            data[i] = data_point.data
+            if position in [NODAL, ELEMENT_NODAL]:
+                node_labels.append(data_point.nodeLabel)
+            elif position in [INTEGRATION_POINT, CENTROID, ELEMENT_NODAL, ELEMENT_FACE]:
+                element_labels.append(data_point.elementLabel)
 
     if not get_position_numbers and not get_frame_value:
         return data
@@ -161,59 +165,56 @@ def write_field_to_odb(field_data, field_id, odb_file_name, step_name, instance_
 
     :return:                        Nothing
     """
-    odb = odbAccess.openOdb(odb_file_name, readOnly=False)
-    if step_name not in odb.steps:
-        step = odb.Step(name=step_name, description=step_description, domain=TIME, timePeriod=1.)
-    else:
-        step = odb.steps[step_name]
-    if instance_name == '':
-        instance = odb.rootAssembly.instances[odb.rootAssembly.instances.keys()[0]]
-    else:
-        instance = odb.rootAssembly.instances[instance_name]
-
-    if position in [INTEGRATION_POINT, CENTROID, ELEMENT_NODAL, ELEMENT_FACE]:
-        if set_name:
-            objects = instance.elementSets[set_name].elements
+    with OpenOdb(odb_file_name, read_only=False) as odb:
+        if step_name not in odb.steps:
+            step = odb.Step(name=step_name, description=step_description, domain=TIME, timePeriod=1.)
         else:
-            objects = instance.elements
-    elif position == NODAL:
-        if set_name:
-            objects = instance.nodeSets[set_name].nodes
+            step = odb.steps[step_name]
+        if instance_name == '':
+            instance = odb.rootAssembly.instances[odb.rootAssembly.instances.keys()[0]]
         else:
-            objects = instance.nodes
-    else:
-        raise TypeError("The specified position is not a valid output position for abaqus")
-    object_numbers = []
-    for obj in objects:
-        object_numbers.append(obj.label)
-    field_types = {1: SCALAR, 6: TENSOR_3D_FULL, 3: VECTOR}
+            instance = odb.rootAssembly.instances[instance_name]
 
-    if len(field_data.shape) == 1:
-        field_data = field_data[:, np.newaxis]
-    field_type = field_types[field_data.shape[1]]
-    field_data_to_frame = tuple(field_data[:, :])
-    if frame_value is None:
-        if len(step.frames) > 0:
-            frame_value = step.frames[len(step.frames)-1].frameValue + 1.0
+        if position in [INTEGRATION_POINT, CENTROID, ELEMENT_NODAL, ELEMENT_FACE]:
+            if set_name:
+                objects = instance.elementSets[set_name].elements
+            else:
+                objects = instance.elements
+        elif position == NODAL:
+            if set_name:
+                objects = instance.nodeSets[set_name].nodes
+            else:
+                objects = instance.nodes
         else:
-            frame_value = 0.
+            raise TypeError("The specified position is not a valid output position for abaqus")
+        object_numbers = []
+        for obj in objects:
+            object_numbers.append(obj.label)
+        field_types = {1: SCALAR, 6: TENSOR_3D_FULL, 3: VECTOR}
 
-    if frame_number is None or len(step.frames) == 0 or len(step.frames) <= frame_number:
-        frame = step.Frame(incrementNumber=len(step.frames)+1, frameValue=frame_value, description='')
-    else:
-        frame = step.frames[frame_number]
+        if len(field_data.shape) == 1:
+            field_data = field_data[:, np.newaxis]
+        field_type = field_types[field_data.shape[1]]
+        field_data_to_frame = tuple(field_data[:, :])
+        if frame_value is None:
+            if len(step.frames) > 0:
+                frame_value = step.frames[len(step.frames)-1].frameValue + 1.0
+            else:
+                frame_value = 0.
 
-    if invariants is None:
-        invariants = []
-    if field_id in frame.fieldOutputs:
-        field = frame.fieldOutputs[field_id]
-    else:
-        field = frame.FieldOutput(name=field_id, description=field_description, type=field_type,
-                                  validInvariants=invariants)
-    field.addData(position=position, instance=instance, labels=object_numbers, data=field_data_to_frame)
-    odb.update()
-    odb.save()
-    odb.close()
+        if frame_number is None or len(step.frames) == 0 or len(step.frames) <= frame_number:
+            frame = step.Frame(incrementNumber=len(step.frames)+1, frameValue=frame_value, description='')
+        else:
+            frame = step.frames[frame_number]
+
+        if invariants is None:
+            invariants = []
+        if field_id in frame.fieldOutputs:
+            field = frame.fieldOutputs[field_id]
+        else:
+            field = frame.FieldOutput(name=field_id, description=field_description, type=field_type,
+                                      validInvariants=invariants)
+        field.addData(position=position, instance=instance, labels=object_numbers, data=field_data_to_frame)
 
 
 def get_nodal_coordinates_from_node_set(odb_file_name, node_set_name, instance_name=None):
@@ -228,16 +229,16 @@ def get_nodal_coordinates_from_node_set(odb_file_name, node_set_name, instance_n
     :return:                A dict with the node labels as the keys and numpy arrays with the coordinates of the node
     """
     # todo Implement exception if invalid set or instances are provided
-    odb = odbAccess.openOdb(odb_file_name, readOnly=True)
-    if instance_name:
-        node_set = odb.rootAssembly.instances[instance_name]
-    else:
-        node_set = odb.rootAssembly.nodeSets[node_set_name]
-    node_dict = {}
-    for node in node_set.nodes:
-        node_dict[node.label] = node.coordinates
-    odb.close()
-    return node_dict
+    with OpenOdb(odb_file_name, read_only=True) as odb:
+        if instance_name:
+            node_set = odb.rootAssembly.instances[instance_name]
+        else:
+            node_set = odb.rootAssembly.nodeSets[node_set_name]
+        node_dict = {}
+        for node in node_set.nodes:
+            node_dict[node.label] = node.coordinates
+        odb.close()
+        return node_dict
 
 
 def flip_node_order(data, axis):      # ToDo implement flip around x and y axis as well
@@ -271,18 +272,16 @@ def add_node_set(odb_file_name, node_set_name, node_labels, instance_name=None):
                             odb.rootAssembly.nodeSets
     :return:                Nothing
     """
-    odb = odbAccess.openOdb(odb_file_name, readOnly=False)
-    if instance_name:
-        base = odb.rootAssembly.instances[instance_name]
-    else:
-        if len(odb.rootAssembly.instances) == 1:
-            base = odb.rootAssembly
+    with OpenOdb(odb_file_name, read_only=False) as odb:
+        if instance_name:
+            base = odb.rootAssembly.instances[instance_name]
         else:
-            raise ValueError('odb has multiple instances, please specify an instance')
-    if node_set_name not in base.nodeSets:
-        base.NodeSetFromNodeLabels(name=node_set_name, nodeLabels=node_labels)
-    odb.save()
-    odb.close()
+            if len(odb.rootAssembly.instances) == 1:
+                base = odb.rootAssembly
+            else:
+                raise ValueError('odb has multiple instances, please specify an instance')
+        if node_set_name not in base.nodeSets:
+            base.NodeSetFromNodeLabels(name=node_set_name, nodeLabels=node_labels)
 
 
 def add_element_set(odb_file_name, element_set_name, element_labels, instance_name=None):
@@ -297,15 +296,13 @@ def add_element_set(odb_file_name, element_set_name, element_labels, instance_na
                                 odb.rootAssembly.nodeSets
     :return:                    Nothing
     """
-    odb = odbAccess.openOdb(odb_file_name, readOnly=False)
-    if instance_name:
-        base = odb.rootAssembly.instances[instance_name]
-    else:
-        if len(odb.rootAssembly.instances) == 1:
-            base = odb.rootAssembly.instances[odb.rootAssembly.instances.keys()[0]]
+    with OpenOdb(odb_file_name, read_only=False) as odb:
+        if instance_name:
+            base = odb.rootAssembly.instances[instance_name]
         else:
-            raise ValueError('odb has multiple instances, please specify an instance')
-    if element_set_name not in base.elementSets:
-        base.ElementSetFromElementLabels(name=element_set_name, elementLabels=element_labels)
-    odb.save()
-    odb.close()
+            if len(odb.rootAssembly.instances) == 1:
+                base = odb.rootAssembly.instances[odb.rootAssembly.instances.keys()[0]]
+            else:
+                raise ValueError('odb has multiple instances, please specify an instance')
+        if element_set_name not in base.elementSets:
+            base.ElementSetFromElementLabels(name=element_set_name, elementLabels=element_labels)

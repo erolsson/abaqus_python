@@ -5,11 +5,11 @@ import numpy as np
 
 from visualization import * # noqa
 import xyPlot
-import odbAccess
 
 from abaqusConstants import POINT_LIST, ELEMENT_NODAL, TRUE_DISTANCE, UNDEFORMED, PATH_POINTS, COMPONENT
 from abaqusConstants import NODAL, INTEGRATION_POINT, CENTROID
 
+from utilities import OpenOdb
 
 # Getting rid of the flake8 issues that session is undefined
 session = session # noqa
@@ -48,7 +48,7 @@ def main():
     with open(pickle_file_name, 'r') as parameter_pickle:
         parameters = pickle.load(parameter_pickle)
 
-    odb_filename = str(parameters['odb_filename'])
+    odb_file_name = str(parameters['odb_filename'])
     path_points_filename = str(parameters['path_points_filename'])
     variable = str(parameters['variable'])
     output_position = output_positions[str(parameters['output_position'])]
@@ -57,31 +57,30 @@ def main():
     if 'component' in parameters:
         component = str(parameters['component'])
 
-    odb = odbAccess.openOdb(odb_filename)
-    session.Viewport(name='Viewport: 1', origin=(0.0, 0.0), width=309.913116455078,
-                     height=230.809509277344)
-    session.viewports['Viewport: 1'].makeCurrent()
-    session.viewports['Viewport: 1'].maximize()
-    o7 = session.odbs[session.odbs.keys()[0]]
-    session.viewports['Viewport: 1'].setValues(displayedObject=o7)
+    with OpenOdb(odb_file_name, read_only=True) as odb:
+        session.Viewport(name='Viewport: 1', origin=(0.0, 0.0), width=309.913116455078,
+                         height=230.809509277344)
+        session.viewports['Viewport: 1'].makeCurrent()
+        session.viewports['Viewport: 1'].maximize()
+        o7 = session.odbs[session.odbs.keys()[0]]
+        session.viewports['Viewport: 1'].setValues(displayedObject=o7)
 
-    if 'step_name' not in parameters:
-        step_name = odb.steps.keys()[-1]
-    else:
-        step_name = str(parameters['step_name'])
+        if 'step_name' not in parameters:
+            step_name = odb.steps.keys()[-1]
+        else:
+            step_name = str(parameters['step_name'])
 
-    step_index = odb.steps.keys().index(step_name)
-    if 'frame_number' not in parameters:
-        frame_number = len(odb.steps[step_name].frames)
-    else:
-        frame_number = parameters['frame_number']
-    session.viewports['Viewport: 1'].odbDisplay.setFrame(step=step_index, frame=frame_number)
+        step_index = odb.steps.keys().index(step_name)
+        if 'frame_number' not in parameters:
+            frame_number = len(odb.steps[step_name].frames)
+        else:
+            frame_number = parameters['frame_number']
+        session.viewports['Viewport: 1'].odbDisplay.setFrame(step=step_index, frame=frame_number)
 
-    path_points = np.load(path_points_filename)
-    path = create_path(path_points, 'path', session)
-    data = get_data_from_path(path, session, variable, component, output_position=output_position)
-    np.save(data_filename, data)
-    odb.close()
+        path_points = np.load(path_points_filename)
+        path = create_path(path_points, 'path', session)
+        data = get_data_from_path(path, session, variable, component, output_position=output_position)
+        np.save(data_filename, data)
 
 
 if __name__ == '__main__':

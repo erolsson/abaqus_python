@@ -1,6 +1,5 @@
 from collections import namedtuple
 
-import glob
 import os
 import pickle
 import pathlib
@@ -38,7 +37,7 @@ class OdbInstance:
 
 
 class ABQInterface:
-    def __init__(self, abq_command, shell=None, output=True):
+    def __init__(self, abq_command, shell=None, output=False):
         self.abq = abq_command
         if shell is None:
             shell = '/bin/bash'
@@ -50,13 +49,11 @@ class ABQInterface:
         current_directory = os.getcwd()
         if directory is not None:
             os.chdir(directory)
-        print(directory)
-        print(glob.glob("*"))
         if self.output is True:
-            job = subprocess.Popen([self.shell_command, '-i', '-c','cd ' + str(directory) + ' &&' + command_string])
+            job = subprocess.Popen([self.shell_command, '-i', '-c', 'cd ' + str(directory) + ' &&' + command_string])
         else:
             f_null = open(os.devnull, 'w')
-            job = subprocess.Popen([self.shell_command, '-i', '-c', command_string],
+            job = subprocess.Popen([self.shell_command, '-i', '-c', 'cd ' + str(directory) + ' &&' + command_string],
                                    stdout=f_null, stderr=subprocess.STDOUT)
         job.wait()
         os.chdir(current_directory)
@@ -98,7 +95,6 @@ class ABQInterface:
             parameter_pickle_name = work_directory / 'parameter_pickle.pkl'
             with open(parameter_pickle_name, 'wb') as pickle_file:
                 pickle.dump(data_for_creating_odb, pickle_file, protocol=2)
-            print(abaqus_python_directory)
             self.run_command(self.abq + ' python create_empty_odb_from_data.py ' + str(parameter_pickle_name),
                              directory=abaqus_python_directory)
 
@@ -110,12 +106,14 @@ class ABQInterface:
             results_pickle_name = work_directory / 'results.pkl'
             if step_name is None:
                 step_name = ''
+            parameter_data = {'field_id': field_id, 'odb_file_name': str(odb_file_name), 'step_name': step_name,
+                              'frame_number': frame_number, 'set_name': set_name, 'instance_name': instance_name,
+                              'get_position_numbers': get_position_numbers, 'get_frame_value': get_frame_value,
+                              'position': position}
+            if coordinate_system:
+                parameter_data['coordinate_system'] = coordinate_system._asdict()
             with open(parameter_pickle_name, 'wb') as pickle_file:
-                pickle.dump({'field_id': field_id, 'odb_file_name': str(odb_file_name), 'step_name': step_name,
-                             'frame_number': frame_number, 'set_name': set_name, 'instance_name': instance_name,
-                             'get_position_numbers': get_position_numbers, 'get_frame_value': get_frame_value,
-                             'position': position, 'coordinate_system': coordinate_system._asdict()},
-                            pickle_file, protocol=2)
+                pickle.dump(parameter_data, pickle_file, protocol=2)
             self.run_command(self.abq + ' python read_data_from_odb.py ' + str(parameter_pickle_name) + ' '
                              + str(results_pickle_name), directory=abaqus_python_directory)
             with open(results_pickle_name, 'rb') as results_pickle:

@@ -170,7 +170,10 @@ def write_field_to_odb(field_data, field_id, odb_file_name, step_name, instance_
         else:
             step = odb.steps[step_name]
         if instance_name == '':
-            instance = odb.rootAssembly.instances[odb.rootAssembly.instances.keys()[0]]
+            if len(odb.rootAssembly.instances) == 1:
+                instance = odb.rootAssembly.instances[odb.rootAssembly.instances.keys()[0]]
+            else:
+                raise ValueError("The odb file consist of several instances, please specfy an instance")
         else:
             instance = odb.rootAssembly.instances[instance_name]
 

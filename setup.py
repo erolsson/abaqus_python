@@ -8,6 +8,5 @@ setup(
     license='0.1',
     author='erolsson',
     author_email='erolsson@kth.se',
-    packages=["abaqus_python"],
     description=''
 )

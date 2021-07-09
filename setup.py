@@ -7,6 +7,7 @@ setup(
     url='',
     license='0.1',
     author='erolsson',
+    packages=['abaqus_python'],
     author_email='erolsson@kth.se',
     description=''
 )

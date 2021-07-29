@@ -9,7 +9,7 @@ import numpy as np
 from abaqus_interface.common import TemporaryDirectory
 
 
-abaqus_python_directory = pathlib.Path(__file__).parents[1].absolute() / "abaqus_files"
+abaqus_python_directory = pathlib.Path(__file__).parents[0].absolute() / "abaqus_files"
 
 
 CoordinateSystem = namedtuple('CoordinateSystem', ['name', 'origin', 'point1', 'point2', 'system_type'])

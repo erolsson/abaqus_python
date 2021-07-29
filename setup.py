@@ -7,7 +7,7 @@ setup(
     url='',
     version='0.1',
     author='erolsson',
-    packages=['abaqus_interface'],
+    packages=['abaqus_interface', 'abaqus_python_scripts'],
     author_email='erolsson@kth.se',
     description=''
 )

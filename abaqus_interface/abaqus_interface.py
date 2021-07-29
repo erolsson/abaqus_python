@@ -10,7 +10,7 @@ from abaqus_interface.common import TemporaryDirectory
 
 
 abaqus_python_directory = pathlib.Path(__file__).parents[1].absolute() / "abaqus_python_scripts"
-
+print(abaqus_python_directory)
 
 CoordinateSystem = namedtuple('CoordinateSystem', ['name', 'origin', 'point1', 'point2', 'system_type'])
 cylindrical_system_z = CoordinateSystem(name='cylindrical', origin=(0., 0., 0.), point1=(1., 0., 0.),
